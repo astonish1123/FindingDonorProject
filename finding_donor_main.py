@@ -72,23 +72,12 @@ if __name__=='__main__':
     
     clf = RandomForestClassifier(random_state=8)
 
-    parameters_rand = {"max_depth": [3, None],
-                       "n_estimators": list(range(10, 200)),
-                       "max_features": list(range(1, X_test.shape[1]+1)),
-                       "min_samples_split": list(range(2, 11)),
-                       "min_samples_leaf": list(range(1, 11)),
-                       "bootstrap": [True, False],
-                       "criterion": ["gini", "entropy"]}
-
-
-    parameters_k = {'n_neighbors': list(range(1, 5)), 
-                    'leaf_size': list(range(10, 100, 10)),
-                    'weights': ['uniform', 'distance']}
-
-    parameters_svc = {'degree': list(range(3, 5)), 
-                      'C': [1, 10, 100, 1000], 
-                      'kernel': ['poly'], 
-                      'gamma': [0.01, 0.001, 0.0001]}
+    parameters = {"max_depth": [3, None],
+              "n_estimators": [50, 100, 200],
+              "min_samples_split": [2, 3, 10],
+              "min_samples_leaf": [1, 3, 10],
+              "bootstrap": [True, False],
+              "criterion": ["gini", "entropy"]}
 
     scorer = make_scorer(fbeta_score, beta=0.5)
 
@@ -106,4 +95,5 @@ if __name__=='__main__':
     print('Final accuracy score on the tesitn data: {:.4f}'.format(accuracy_score(y_test, best_predictions)))
     print('Final F-score on the testing data: {:.4f}'.format(fbeta_score(y_test, best_predictions, beta=0.5)))
 
-
+    model = RandomForestClassifier().fit(X_train, y_train)
+    importances = model.feature_importances_

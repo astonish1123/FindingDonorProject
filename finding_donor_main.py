@@ -2,6 +2,12 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
+from functions import train_predict
+from sklearn.model_selection import GridSearchCV
+from sklearn.metrics import make_scorer, fbeta_score, accuracy_score
 
 if __name__=='__main__':
     data = pd.read_csv('census.csv', sep=',')
@@ -48,3 +54,56 @@ if __name__=='__main__':
     precision = accuracy
     fscore = (1 + 0.5**2)*(precision*recall) / (0.5**2*precision+recall)
     print('Naive Predictor: [Accuracy score: {:.4f}, F-score: {:.4f}'.format(accuracy, fscore))
+
+    clf_A = RandomForestClassifier(random_state=8)
+    clf_B = KNeighborsClassifier()
+    clf_C = SVC(random_state=8)
+
+    samples_100 = len(y_train)
+    samples_10 = int(samples_100/10)
+    samples_1 = int(samples_10/10)
+
+    results = {}
+    for clf in [clf_A, clf_B, clf_C]:
+        clf_name = clf.__class__.__name__
+        results[clf_name] = {}
+        for i, samples in enumerate([samples_1, samples_10, samples_100]):
+            results[clf_name][i] = train_predict(clf, samples, X_train, y_train, X_test, y_test)
+    
+    clf = RandomForestClassifier(random_state=8)
+
+    parameters_rand = {"max_depth": [3, None],
+                       "n_estimators": list(range(10, 200)),
+                       "max_features": list(range(1, X_test.shape[1]+1)),
+                       "min_samples_split": list(range(2, 11)),
+                       "min_samples_leaf": list(range(1, 11)),
+                       "bootstrap": [True, False],
+                       "criterion": ["gini", "entropy"]}
+
+
+    parameters_k = {'n_neighbors': list(range(1, 5)), 
+                    'leaf_size': list(range(10, 100, 10)),
+                    'weights': ['uniform', 'distance']}
+
+    parameters_svc = {'degree': list(range(3, 5)), 
+                      'C': [1, 10, 100, 1000], 
+                      'kernel': ['poly'], 
+                      'gamma': [0.01, 0.001, 0.0001]}
+
+    scorer = make_scorer(fbeta_score, beta=0.5)
+
+    grid_obj = GridSearchCV(estimator=clf, param_grid=parameters_rand, scoring=scorer)
+    grid_fit = grid_obj.fit(X_train, y_train)
+    best_clf = grid_fit.best_estimator_
+
+    predictions = (clf.fit(X_train, y_train).predict(X_test))
+    best_predictions = best_clf.predict(X_test)
+
+    print('Unoptimized model\n-------')
+    print('Accuracy score on testing data: {:.4f}'.format(accuracy_score(y_test, predictions)))
+    print('F-score on testing data: {:.4f}'.format(fbeta_score(y_test, predictions, beta=0.5)))
+    print('\nOptimized Model\n-------')
+    print('Final accuracy score on the tesitn data: {:.4f}'.format(accuracy_score(y_test, best_predictions)))
+    print('Final F-score on the testing data: {:.4f}'.format(fbeta_score(y_test, best_predictions, beta=0.5)))
+
+
